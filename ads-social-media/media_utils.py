@@ -46,18 +46,6 @@ def req(url, **kwargs):
     r = requests.get(url, params=query_params)
     return r.json()
 
-def get_keywords(bibcode):
-    """"
-    Get normalized keywords for a paper and its references
-    """
-    keywords = []
-    fl = 'keyword'
-    q = 'bibcode:%s OR references(bibcode:%s)' % (bibcode,bibcode)
-    rsp = req(config.SOLR_URL, q=q, fl=fl, rows=config.MAX_HITS)
-    keywords = flatten(map(lambda b: b['keyword'],
-           filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
-    return uniq(filter(lambda a: a in IDENTIFIERS, keywords))
-
 def get_publication_data(bibcode):
 #    get the article of the day for today from MongoDB
 
