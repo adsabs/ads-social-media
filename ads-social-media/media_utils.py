@@ -56,6 +56,12 @@ def req(url, **kwargs):
     r = requests.get(url, params=query_params)
     return r.json()
 
+def get_publication_data(bibcode):
+    fl = ''
+    q = 'bibcode:%s' % bibcode
+    rsp = req(config.SOLR_URL, q=q, fl=fl, rows=config.MAX_HITS)
+    publication_data.append(rsp['response']['docs'])
+
 def get_mongo_data(bbc):
     doc = session.get_doc(bbc)
     try:
@@ -113,7 +119,7 @@ def select_finalists(candidates):
             paper_cluster = get_paper_cluster(candidate[0])
         if bibstem not in bibstems:
             if not config.USE_CLUSTERS:
-                finalists.append(candidate[0])
+                finalists.append("%s:%s"%(candidate[0],"NA"))
                 bibstems.append(bibstem)
             else:
                 if paper_cluster not in clusters:
@@ -134,7 +140,21 @@ def get_keywords(bibcode):
            filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
     return uniq(filter(lambda a: a in config.IDENTIFIERS, keywords))
 
-def get_publication_data(bibcode):
+def save_articles_of_the_day(finalists):
+    for pub in finalists[:config.AOD_LIMIT]:
+        pub_data = get_publication_data(pub[0])
+        doc = {}
+        doc['publication'] = pub[0]
+        doc['cluster'] = pub[1]
+        doc['publication_date'] = 
+        doc['keywords'] = get_keywords(pub[0])
+        doc['first_author'] = 
+        doc['title'] = 
+        doc['short_bibcode'] =
+        doc['post_date'] =
+        aod_collection.insert(doc)
+
+def get_article_of_the_day_data(bibcode):
 #    get the article of the day for today from MongoDB
 
 
