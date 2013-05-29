@@ -8,6 +8,11 @@ import datetime
 import urllib
 import urllib2
 from config import config
+from multiprocessing import Pool, current_process
+from multiprocessing import Manager
+# memory mapped data
+manager = Manager()
+ads_data = manager.dict()
 # module to post to Delicious
 from pydelicious import DeliciousAPI
 # module to post to Twitter
@@ -51,7 +56,19 @@ def req(url, **kwargs):
     r = requests.get(url, params=query_params)
     return r.json()
 
-def get_index_date(batch_data):
+def get_mongo_data(bbc):
+    doc = session.get_doc(bbc)
+    try:
+        doc.pop("full", None)
+    except:
+        pass
+    try:
+        ads_data[bbc] = doc
+    except:
+        pass
+
+def get_batch_data(**args):
+    # first establish the date of the current index
     dirs = os.listdir(config.ASTdir)
     for entry in dirs:
         subdir = "%s/%s" % (ASTdir,entry)
@@ -59,29 +76,51 @@ def get_index_date(batch_data):
             if entry == "current":
                 cur_dir = os.path.realpath(subdir)
                 batch_data['cur_date'] = os.path.basename(cur_dir).replace('-','')
+    # record the previous Articles of the Day
+    batch_data['previous'] = get_previous_articles_of_the_day()
     return batch_data
 
 def get_recent_astronomy_publications(batch_data):
     bib2accno = "%s/current/bib2accno.list" % config.ASTdir
     fh = open(bib2accno)
-    new_entries = []
+    batch_data['candidates'] = []
     for line in fh:
         entries = line.strip().split('\t')
         if len(entries) != 4:
             continue
         if entries[3] == batch_data['cur_date']:
             bibc = entries[0]
-            if int(bibc[:4]) > config.CUTOFF_YEAR:
-                new_entries.append(bibc)
-    return new_entries
+            # ignore all papers older than CUTOFF_YEAR, that were an Article of the Day previously,
+            # or whose bibstem is in the list of publications to ignore
+            if int(bibc[:4]) > config.CUTOFF_YEAR and bibc not in batch_data['previous'] and bibc[4:9] not in config.IGNORE_PUBS and bib[10:13] != 'tmp':
+                batch_data['candidates'].append(bibc)
+    return batch_data
 
-def get_mongo_data(bibcode):
-    doc = session.get_doc(bibcode)
-    try:
-        doc.pop("full", None)
-    except:
-        pass
-    return doc
+def rank_candidates(batch_data, ads_data):
+    candidates = []
+    for bibcode in batch_data['candidates']:
+        candidates.append((bibcode,float(ads_data[bibcode]['citations']*ads_data[bibcode]['reads'])*invAuth))
+    candidates = sorted(candidates, key=operator.itemgetter(1),reverse=True)
+    return candidates
+
+def select_finalists(candidates):
+    clusters = []
+    bibstems = []
+    finalists= []
+    for candidate in candidates:
+        bibstem = candidate[0][4:9]
+        if config.USE_CLUSTERS:
+            paper_cluster = get_paper_cluster(candidate[0])
+        if bibstem not in bibstems:
+            if not config.USE_CLUSTERS:
+                finalists.append(candidate[0])
+                bibstems.append(bibstem)
+            else:
+                if paper_cluster not in clusters:
+                    finalists.append("%s:%s"%(candidate[0],paper_cluster))
+                    bibstems.append(bibstem)
+                    clusters.append(paper_cluster)
+    return finalists
 
 def get_keywords(bibcode):
     """"
@@ -93,7 +132,7 @@ def get_keywords(bibcode):
     rsp = req(SOLR_URL, q=q, fl=fl, rows=MAX_HITS)
     keywords = flatten(map(lambda b: b['keyword'],
            filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
-    return uniq(filter(lambda a: a in IDENTIFIERS, keywords))
+    return uniq(filter(lambda a: a in config.IDENTIFIERS, keywords))
 
 def get_publication_data(bibcode):
 #    get the article of the day for today from MongoDB
