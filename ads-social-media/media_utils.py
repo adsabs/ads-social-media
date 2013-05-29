@@ -70,6 +70,18 @@ def get_recent_astronomy_publications(batch_data):
                 new_entries.append(bibc)
     return new_entries
 
+def get_keywords(bibcode):
+    """"
+    Get all citations (bibcodes) for given set of papers
+    """
+    keywords = []
+    fl = 'keyword'
+    q = 'bibcode:%s OR references(bibcode:%s)' % (bibcode,bibcode)
+    rsp = req(SOLR_URL, q=q, fl=fl, rows=MAX_HITS)
+    keywords = flatten(map(lambda b: b['keyword'],
+           filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
+    return uniq(filter(lambda a: a in IDENTIFIERS, keywords))
+
 def get_publication_data(bibcode):
 #    get the article of the day for today from MongoDB
 
