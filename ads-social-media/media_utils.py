@@ -57,7 +57,7 @@ def req(url, **kwargs):
     return r.json()
 
 def get_publication_data(bibcode):
-    fl = ''
+    fl = 'first_author_norm,title,pubdate'
     q = 'bibcode:%s' % bibcode
     rsp = req(config.SOLR_URL, q=q, fl=fl, rows=config.MAX_HITS)
     publication_data.append(rsp['response']['docs'])
@@ -148,8 +148,8 @@ def save_articles_of_the_day(finalists):
         doc['cluster'] = pub[1]
         doc['publication_date'] = 
         doc['keywords'] = get_keywords(pub[0])
-        doc['first_author'] = 
-        doc['title'] = 
+        doc['first_author'] = pub_data['first_author_norm']
+        doc['title'] = pub_data['title']
         doc['short_bibcode'] =
         doc['post_date'] =
         aod_collection.insert(doc)
