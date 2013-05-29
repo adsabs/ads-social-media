@@ -46,6 +46,30 @@ def req(url, **kwargs):
     r = requests.get(url, params=query_params)
     return r.json()
 
+def get_index_date(batch_data):
+    dirs = os.listdir(config.ASTdir)
+    for entry in dirs:
+        subdir = "%s/%s" % (ASTdir,entry)
+        if os.path.islink(subdir):
+            if entry == "current":
+                cur_dir = os.path.realpath(subdir)
+                batch_data['cur_date'] = os.path.basename(cur_dir).replace('-','')
+    return batch_data
+
+def get_recent_astronomy_publications(batch_data):
+    bib2accno = "%s/current/bib2accno.list" % config.ASTdir
+    fh = open(bib2accno)
+    new_entries = []
+    for line in fh:
+        entries = line.strip().split('\t')
+        if len(entries) != 4:
+            continue
+        if entries[3] == batch_data['cur_date']:
+            bibc = entries[0]
+            if int(bibc[:4]) > config.CUTOFF_YEAR:
+                new_entries.append(bibc)
+    return new_entries
+
 def get_publication_data(bibcode):
 #    get the article of the day for today from MongoDB
 
