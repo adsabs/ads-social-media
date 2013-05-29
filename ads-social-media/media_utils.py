@@ -12,6 +12,11 @@ from config import config
 from pydelicious import DeliciousAPI
 # module to post to Twitter
 import tweepy
+# module for retrieving data from MongoDB
+site.addsitedir('/proj/adsx/adsdata')
+import adsdata
+# initiate MongoDB session
+session = adsdata.get_session()
 
 today = datetime.datetime.now().strftime("%A")
 this_year = datetime.datetime.now().strftime("%Y")
@@ -69,6 +74,14 @@ def get_recent_astronomy_publications(batch_data):
             if int(bibc[:4]) > config.CUTOFF_YEAR:
                 new_entries.append(bibc)
     return new_entries
+
+def get_mongo_data(bibcode):
+    doc = session.get_doc(bibcode)
+    try:
+        doc.pop("full", None)
+    except:
+        pass
+    return doc
 
 def get_keywords(bibcode):
     """"
