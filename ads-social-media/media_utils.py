@@ -94,8 +94,7 @@ def post_to_Twitter(art_data):
 def post_to_Delicious(art_data):
     a = DeliciousAPI(config.DELICIOUS_USER,config.DELICIOUS_PWD)
     arturl = config.BASE_URL % art_data['bibcode'].strip()
-    keywords = get_keywords(art_data['bibcode'])
-    entry_tags = ",".join(keywords)
+    entry_tags = ",".join(art_data['keywords'])
     a.posts_add(arturl, art_data['title'], extended=config.EXTENDED_DESCRIPTION, tags=entry_tags)
 
 def post_to_private_library(art_data):
