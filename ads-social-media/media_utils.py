@@ -16,6 +16,48 @@ import tweepy
 today = datetime.datetime.now().strftime("%A")
 this_year = datetime.datetime.now().strftime("%Y")
 
+def uniq(items):
+    """
+    Returns a uniqued list.
+    """
+    unique = []
+    unique_dict = {}
+    for item in items:
+        if item not in unique_dict:
+            unique_dict[item] = None
+            unique.append(item)
+    return unique
+
+def flatten(items):
+    result = []
+    for item in items:
+        if hasattr(item, '__iter__'):
+            result.extend(flatten(item))
+        else:
+            result.append(item)
+    return result
+
+def req(url, **kwargs):
+    """
+    Function to query Solr
+    """
+    kwargs['wt'] = 'json'
+    query_params = urllib.urlencode(kwargs)
+    r = requests.get(url, params=query_params)
+    return r.json()
+
+def get_keywords(bibcode):
+    """"
+    Get normalized keywords for a paper and its references
+    """
+    keywords = []
+    fl = 'keyword'
+    q = 'bibcode:%s OR references(bibcode:%s)' % (bibcode,bibcode)
+    rsp = req(config.SOLR_URL, q=q, fl=fl, rows=config.MAX_HITS)
+    keywords = flatten(map(lambda b: b['keyword'],
+           filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
+    return uniq(filter(lambda a: a in IDENTIFIERS, keywords))
+
 def get_title_string(bibcode):
     try:
         data = get_article_data(bibcode)
@@ -56,7 +98,6 @@ def post_to_Delicious(bibcode,title):
     a = DeliciousAPI(config.DELICIOUS_USER,config.DELICIOUS_PWD)
     arturl = config.BASE_URL % bibcode.strip()
     keywords = get_keywords(bibcode)
-    keywords = uniq(keywords)
     entry_tags = ",".join(keywords)
     a.posts_add(arturl, title, extended=config.EXTENDED_DESCRIPTION, tags=entry_tags)
 
