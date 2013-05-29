@@ -67,3 +67,9 @@ def post_to_private_library(bibcode):
     f = urllib2.urlopen(req)
 
 def save_article_of_the_day(bibcode):
+    
+def post_article(bibcode,**args):
+    try:
+        targets = args['targets'].split(',')
+    except:
+        targets = ['Facebook','Twitter','Delicious','private_library']
