@@ -141,7 +141,7 @@ def select_finalists(candidates):
     return finalists
 
 def save_articles_of_the_day(finalists):
-    start_date = datetime.today
+    start_date = datetime.today()
     for i in range(config.AOD_LIMIT):
         pub_data = get_publication_data(finalists[i][0])
         doc = {}
@@ -155,9 +155,14 @@ def save_articles_of_the_day(finalists):
         doc['post_date'] = start_date + timedelta(days=config.time_delta[i])
         aod_collection.insert(doc)
 
-def get_article_of_the_day_data(bibcode):
+def get_article_of_the_day_data(date):
 #    get the article of the day for today from MongoDB
-
+    client = pymongo.MongoClient(config.MONGO_HOST,config.MONGO_PORT)
+    db = client.
+    db.authenticate(config.MONGO_USER,config.MONGO_PWD)
+    aod_coll = db.articles_of_the_day
+    data = aod_coll.find_one({'post_date':date})
+    return data
 
 def post_to_Facebook(art_data):
     request_path = str(config.FACEBOOK_ID)+'/feed'
@@ -202,12 +207,13 @@ def post_to_private_library(art_data):
 
 def save_article_of_the_day(bibcode):
     
-def post_article(bibcode,**args):
+def post_article(**args):
+    today = datetime.today()
     try:
         targets = args['targets'].split(',')
     except:
         targets = ['Facebook','Twitter','Delicious','private_library']
-    data = get_publication_data(bibcode)
+    data = get_article_of_the_day_data(today)
     for target in targets:
         func = globals()["post_to_%s"%target]
         res = func(data)
