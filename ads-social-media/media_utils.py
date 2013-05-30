@@ -62,6 +62,18 @@ def get_publication_data(bibcode):
     rsp = req(config.SOLR_URL, q=q, fl=fl, rows=config.MAX_HITS)
     publication_data.append(rsp['response']['docs'])
 
+def get_keywords(bibcode):
+    """"
+    Get all citations (bibcodes) for given set of papers
+    """
+    keywords = []
+    fl = 'keyword'
+    q = 'bibcode:%s OR references(bibcode:%s)' % (bibcode,bibcode)
+    rsp = req(SOLR_URL, q=q, fl=fl, rows=MAX_HITS)
+    keywords = flatten(map(lambda b: b['keyword'],
+           filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
+    return uniq(filter(lambda a: a in config.IDENTIFIERS, keywords))
+
 def get_mongo_data(bbc):
     doc = session.get_doc(bbc)
     try:
@@ -128,30 +140,19 @@ def select_finalists(candidates):
                     clusters.append(paper_cluster)
     return finalists
 
-def get_keywords(bibcode):
-    """"
-    Get all citations (bibcodes) for given set of papers
-    """
-    keywords = []
-    fl = 'keyword'
-    q = 'bibcode:%s OR references(bibcode:%s)' % (bibcode,bibcode)
-    rsp = req(SOLR_URL, q=q, fl=fl, rows=MAX_HITS)
-    keywords = flatten(map(lambda b: b['keyword'],
-           filter(lambda a: 'keyword' in a ,rsp['response']['docs'])))
-    return uniq(filter(lambda a: a in config.IDENTIFIERS, keywords))
-
 def save_articles_of_the_day(finalists):
-    for pub in finalists[:config.AOD_LIMIT]:
-        pub_data = get_publication_data(pub[0])
+    start_date = datetime.today
+    for i in range(config.AOD_LIMIT):
+        pub_data = get_publication_data(finalists[i][0])
         doc = {}
-        doc['publication'] = pub[0]
+        doc['publication'] = finalists[i][0]
         doc['cluster'] = pub[1]
-        doc['publication_date'] = 
-        doc['keywords'] = get_keywords(pub[0])
+        doc['publication_date'] = pub_data['pubdate']
+        doc['keywords'] = get_keywords(finalists[i][0])
         doc['first_author'] = pub_data['first_author_norm']
         doc['title'] = pub_data['title']
         doc['short_bibcode'] =
-        doc['post_date'] =
+        doc['post_date'] = start_date + timedelta(days=config.time_delta[i])
         aod_collection.insert(doc)
 
 def get_article_of_the_day_data(bibcode):
