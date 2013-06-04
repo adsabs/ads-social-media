@@ -56,6 +56,9 @@ def req(url, **kwargs):
     r = requests.get(url, params=query_params)
     return r.json()
 
+def shorten_bibcode(bbc):
+    return re.sub('\.$','',re.sub('\.+','.',bbc))
+
 def get_publication_data(bibcode):
     fl = 'first_author_norm,title,pubdate'
     q = 'bibcode:%s' % bibcode
