@@ -154,7 +154,7 @@ def save_articles_of_the_day(finalists):
         doc['keywords'] = get_keywords(finalists[i][0])
         doc['first_author'] = pub_data['first_author_norm']
         doc['title'] = pub_data['title']
-        doc['short_bibcode'] =
+        doc['short_bibcode'] = shorten_bibcode(finalists[i][0])
         doc['post_date'] = start_date + timedelta(days=config.time_delta[i])
         aod_collection.insert(doc)
 
